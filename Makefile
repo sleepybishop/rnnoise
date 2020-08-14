@@ -14,7 +14,7 @@ CFLAGS+= -O3 -std=c99
 LDFLAGS+=-lm
 #CC=clang
 
-all: examples/rnnoise_demo 
+all: examples/rnnoise_demo examples/bertool
 
 librnnoise.a: $(OBJS)
 	$(AR) rcs $@ $^
@@ -38,10 +38,11 @@ scan:
 	scan-build $(MAKE) clean all
 
 gperf: LDFLAGS += -lprofiler -ltcmalloc
-gperf: clean examples/rnnoise_demo 
+gperf: clean examples/rnnoise_demo examples/bertool
 	CPUPROFILE_FREQUENCY=100000 CPUPROFILE=gperf.prof ./examples/rnnoise_demo sample.raw clean.raw
 	pprof ./examples/rnnoise_demo gperf.prof --callgrind > callgrind.gperf
 	gprof2dot --format=callgrind callgrind.gperf -z main | dot -T svg > gperf.svg
+	examples/bertool clean.raw target.raw
 
 valgrind:
 	valgrind ./examples/rnnoise_demo sample_short.raw /dev/null
