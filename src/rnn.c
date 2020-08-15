@@ -80,15 +80,16 @@ void compute_dense(const DenseLayer *layer, float *output, const float *input)
 {
    int i, j;
    int N, M;
+   int stride;
    M = layer->nb_inputs;
    N = layer->nb_neurons;
-   const rnn_weight *ip = layer->input_weights;
-   for (i=0;i<N;i++,ip+=M)
+   stride = N;
+   for (i=0;i<N;i++)
    {
       /* Compute update gate. */
       float sum = layer->bias[i];
       for (j=0;j<M;j++)
-         sum += ip[j]*input[j];
+         sum += layer->input_weights[j*stride + i]*input[j];
       output[i] = WEIGHTS_SCALE*sum;
    }
    switch (layer->activation) {
@@ -112,41 +113,41 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
 {
    int i, j;
    int N, M;
+   int stride;
    float z[MAX_NEURONS];
    float r[MAX_NEURONS];
    float h[MAX_NEURONS];
    M = gru->nb_inputs;
    N = gru->nb_neurons;
-   const rnn_weight *ip = gru->input_weights;
-   const rnn_weight *rp = gru->recurrent_weights;
-   for (i=0;i<N;i++,ip+=M,rp+=N)
+   stride = 3*N;
+   for (i=0;i<N;i++)
    {
       /* Compute update gate. */
       float sum = gru->bias[i];
       for (j=0;j<M;j++)
-         sum += ip[j]*input[j];
+         sum += gru->input_weights[j*stride + i]*input[j];
       for (j=0;j<N;j++)
-         sum += rp[j]*state[j];
+         sum += gru->recurrent_weights[j*stride + i]*state[j];
       z[i] = sigmoid_approx(WEIGHTS_SCALE*sum);
    }
-   for (i=0;i<N;i++,ip+=M,rp+=N)
+   for (i=0;i<N;i++)
    {
       /* Compute reset gate. */
       float sum = gru->bias[N + i];
       for (j=0;j<M;j++)
-         sum += ip[j]*input[j];
+         sum += gru->input_weights[N + j*stride + i]*input[j];
       for (j=0;j<N;j++)
-         sum += rp[j]*state[j];
+         sum += gru->recurrent_weights[N + j*stride + i]*state[j];
       r[i] = sigmoid_approx(WEIGHTS_SCALE*sum);
    }
-   for (i=0;i<N;i++,ip+=M,rp+=N)
+   for (i=0;i<N;i++)
    {
       /* Compute output. */
       float sum = gru->bias[2*N + i];
       for (j=0;j<M;j++)
-         sum += ip[j]*input[j];
+         sum += gru->input_weights[2*N + j*stride + i]*input[j];
       for (j=0;j<N;j++)
-         sum += rp[j]*state[j]*r[j];
+         sum += gru->recurrent_weights[2*N + j*stride + i]*state[j]*r[j];
     switch (gru->activation) {
       case ACTIVATION_SIGMOID: sum = sigmoid_approx(WEIGHTS_SCALE*sum);break;
       case ACTIVATION_TANH: sum = tansig_approx(WEIGHTS_SCALE*sum); break;
