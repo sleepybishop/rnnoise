@@ -76,10 +76,30 @@ static OPUS_INLINE float relu(float x)
    return x < 0 ? 0 : x;
 }
 
+#define DOTP_X 4
+static float dotp(const rnn_weight *a, const float *b, int k)
+{
+  const rnn_weight *ap = a;
+  const float *bp = b;
+  float sum = 0.0, s[DOTP_X]= {0.0};
+  int l = k - k % DOTP_X;
+
+  for(int i = 0; i < l; i+=DOTP_X, ap+=DOTP_X, bp+=DOTP_X)
+    for(int i = 0; i < DOTP_X; i++)
+      s[i] += ap[i] * bp[i];
+
+  for(int i = 0; i < DOTP_X; i++)
+    sum += s[i];
+
+  for (int i = l; i < k; i++)
+    sum += a[i] * b[i];
+
+  return sum;
+}
+
 void compute_dense(const DenseLayer *layer, float *output, const float *input)
 {
-   int i, j;
-   int N, M;
+   int i, N, M;
    M = layer->nb_inputs;
    N = layer->nb_neurons;
    const rnn_weight *ip = layer->input_weights;
@@ -87,8 +107,7 @@ void compute_dense(const DenseLayer *layer, float *output, const float *input)
    {
       /* Compute update gate. */
       float sum = layer->bias[i];
-      for (j=0;j<M;j++)
-         sum += ip[j]*input[j];
+      sum += dotp(ip, input, M);      
       output[i] = WEIGHTS_SCALE*sum;
    }
    switch (layer->activation) {
@@ -110,8 +129,7 @@ void compute_dense(const DenseLayer *layer, float *output, const float *input)
 
 void compute_gru(const GRULayer *gru, float *state, const float *input)
 {
-   int i, j;
-   int N, M;
+   int i, N, M;
    float z[MAX_NEURONS];
    float r[MAX_NEURONS];
    float h[MAX_NEURONS];
@@ -123,30 +141,24 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
    {
       /* Compute update gate. */
       float sum = gru->bias[i];
-      for (j=0;j<M;j++)
-         sum += ip[j]*input[j];
-      for (j=0;j<N;j++)
-         sum += rp[j]*state[j];
+      sum += dotp(ip, input, M);
+      sum += dotp(rp, state, N);
       z[i] = sigmoid_approx(WEIGHTS_SCALE*sum);
    }
    for (i=0;i<N;i++,ip+=M,rp+=N)
    {
       /* Compute reset gate. */
       float sum = gru->bias[N + i];
-      for (j=0;j<M;j++)
-         sum += ip[j]*input[j];
-      for (j=0;j<N;j++)
-         sum += rp[j]*state[j];
-      r[i] = sigmoid_approx(WEIGHTS_SCALE*sum);
+      sum += dotp(ip, input, M);
+      sum += dotp(rp, state, N);
+      r[i] = state[i] * sigmoid_approx(WEIGHTS_SCALE*sum);
    }
    for (i=0;i<N;i++,ip+=M,rp+=N)
    {
       /* Compute output. */
       float sum = gru->bias[2*N + i];
-      for (j=0;j<M;j++)
-         sum += ip[j]*input[j];
-      for (j=0;j<N;j++)
-         sum += rp[j]*state[j]*r[j];
+      sum += dotp(ip, input, M);
+      sum += dotp(rp, r, N);;
     switch (gru->activation) {
       case ACTIVATION_SIGMOID: sum = sigmoid_approx(WEIGHTS_SCALE*sum);break;
       case ACTIVATION_TANH: sum = tansig_approx(WEIGHTS_SCALE*sum); break;
