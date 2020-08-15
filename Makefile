@@ -9,7 +9,8 @@ src/celt_lpc.o
 
 CFLAGS+=-Iinclude -g -Wall --warn-vla
 CFLAGS+= -O3 -std=c99 
-CFLAGS+=-march=native -funroll-loops 
+#CFLAGS+=-march=native -mavx2  
+#CFLAGS+=-fopt-info-vec-inline=vec.log
 LDFLAGS+=-lm
 #CC=clang
 
