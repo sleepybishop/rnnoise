@@ -24,8 +24,10 @@ src/denoise_training: clean $(OBJS)
 
 examples/rnnoise_demo: examples/rnnoise_demo.o librnnoise.a
 
-.PHONY: clean indent scan
+ladspa:
+	make -C ladspa clean all
 
+.PHONY: clean indent scan
 clean:
 	$(RM) $(OBJS) examples/*.o *.a srcc/denoise_training examples/rnnoise_demo
 	$(RM) gperf.svg
