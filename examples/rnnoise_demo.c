@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
     for (i=0;i<FRAME_SIZE;i++) tmp[i] = x[i];
     if (!first) fwrite(tmp, sizeof(int16_t), FRAME_SIZE, fout);
     first = 0;
-    runtime += 0.01; // 480 samples at 48Khz mono -> 5ms
+    runtime += 0.01;
   }
   double elapsed = (usecs() - t0) / 1000000.0;
   fprintf(stdout, "processed %3.3f seconds in %3.3f seconds (%3.2fx realtime) \n", runtime, elapsed, runtime/elapsed);

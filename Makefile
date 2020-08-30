@@ -8,7 +8,7 @@ src/kiss_fft.o\
 src/celt_lpc.o
 
 CFLAGS+=-Iinclude -g -Wall --warn-vla
-CFLAGS+= -O3  
+CFLAGS+= -O3 -fPIC 
 CFLAGS+=-march=native -funroll-loops  
 LDFLAGS+=-lm
 #CC=clang
